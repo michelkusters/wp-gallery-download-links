@@ -1,4 +1,8 @@
-WP-Gallery-Download-Link
-========================
+wp-gallery-download-links
+=========================
 
-This plugin adds a download link below all images in your WordPress galleries.
+== Description ==
+This plugin adds a download link below every image in your WordPress galleries.
+
+== Installation == 
+Just enable the plugin.

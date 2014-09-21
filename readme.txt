@@ -13,7 +13,7 @@ License: GPL v2 - http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
 
 == Description ==
-This plugin adds a download link below all images in your WordPress galleries.
+This plugin adds a download link below every image in your WordPress galleries.
 
 
 == Installation == 
