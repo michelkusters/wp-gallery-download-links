@@ -1,5 +1,5 @@
-=== WP Gallery Download Link ===
-Plugin Name: WP Gallery Download Link
+=== WP Gallery Download Links ===
+Plugin Name: WP Gallery Download Links
 Version: 1.0
 Author: Michel Kusters
 Author URI: https://www.linkedin.com/in/michelkusters

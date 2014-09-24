@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: WP Gallery Download Links
-Plugin URI: http://wordpress.org/
+Plugin URI: https://wordpress.org/plugins/wp-gallery-download-link/
 Description: This plugin adds a download link below every image in your WordPress galleries.
 Author: Michel Kusters
 Version: 1.0
