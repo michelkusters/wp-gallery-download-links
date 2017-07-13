@@ -4,7 +4,7 @@ Plugin Name: WP Gallery Download Links
 Plugin URI: https://wordpress.org/plugins/wp-gallery-download-link/
 Description: This plugin adds a download link below every image in your WordPress galleries.
 Author: Michel Kusters
-Version: 1.0
+Version: 1.1
 Author URI: https://www.linkedin.com/in/michelkusters
 */
 
@@ -26,77 +26,121 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 // Add custom filter to shortcode output
-add_filter('post_gallery', 'my_post_gallery', 10, 2);
-function my_post_gallery($output, $attr) {
-	global $post, $wp_locale;
+add_filter('post_gallery', 'wpgallerydownloadlinks_post_gallery', 10, 2);
 
-	// Gallery instance counter
+// This is a copy of the functon gallery_shortcode found in wp-includes/media.php in WordPress 4.8
+// With a small modification to add a "Download" link below every image (look for the string START CUSTOMIZATION)
+function wpgallerydownloadlinks_post_gallery($output, $attr) {
+	$post = get_post();
+
 	static $instance = 0;
 	$instance++;
 
-	// Validate the author's orderby attribute
-	if(isset($attr['orderby'])) {
-		$attr['orderby'] = sanitize_sql_orderby($attr['orderby']);
-		if(!$attr['orderby']) unset($attr['orderby']);
+	if ( ! empty( $attr['ids'] ) ) {
+		// 'ids' is explicitly ordered, unless you specify otherwise.
+		if ( empty( $attr['orderby'] ) ) {
+			$attr['orderby'] = 'post__in';
+		}
+		$attr['include'] = $attr['ids'];
 	}
 
-	// Get attributes from shortcode
-	extract(shortcode_atts(array(
+	/**
+	 * Filters the default gallery shortcode output.
+	 *
+	 * If the filtered output isn't empty, it will be used instead of generating
+	 * the default gallery template.
+	 *
+	 * @since 2.5.0
+	 * @since 4.2.0 The `$instance` parameter was added.
+	 *
+	 * @see gallery_shortcode()
+	 *
+	 * @param string $output   The gallery output. Default empty.
+	 * @param array  $attr     Attributes of the gallery shortcode.
+	 * @param int    $instance Unique numeric ID of this gallery shortcode instance.
+	 */
+// START CUSTOMIZATION
+//	$output = apply_filters( 'post_gallery', '', $attr, $instance );
+//	if ( $output != '' ) {
+//		return $output;
+//	}
+// END CUSTOMIZATION
+
+	$html5 = current_theme_supports( 'html5', 'gallery' );
+	$atts = shortcode_atts( array(
 		'order'      => 'ASC',
 		'orderby'    => 'menu_order ID',
-		'id'         => $post->ID,
-		'itemtag'    => 'dl',
-		'icontag'    => 'dt',
-		'captiontag' => 'dd',
+		'id'         => $post ? $post->ID : 0,
+		'itemtag'    => $html5 ? 'figure'     : 'dl',
+		'icontag'    => $html5 ? 'div'        : 'dt',
+		'captiontag' => $html5 ? 'figcaption' : 'dd',
 		'columns'    => 3,
 		'size'       => 'thumbnail',
 		'include'    => '',
-		'exclude'    => ''
-	), $attr));
+		'exclude'    => '',
+		'link'       => ''
+	), $attr, 'gallery' );
 
-	// Initialize
-	$id = intval($id);
-	$attachments = array();
-	if($order == 'RAND') $orderby = 'none';
+	$id = intval( $atts['id'] );
 
-	if(!empty($include)) {
-		// Include attribute is present
-		$include = preg_replace('/[^0-9,]+/', '', $include);
-		$_attachments = get_posts(array('include' => $include, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $order, 'orderby' => $orderby));
+	if ( ! empty( $atts['include'] ) ) {
+		$_attachments = get_posts( array( 'include' => $atts['include'], 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $atts['order'], 'orderby' => $atts['orderby'] ) );
 
-		// Setup attachments array
-		foreach($_attachments as $key => $val) {
+		$attachments = array();
+		foreach ( $_attachments as $key => $val ) {
 			$attachments[$val->ID] = $_attachments[$key];
 		}
-	} elseif(!empty($exclude)) {
-		// Exclude attribute is present 
-		$exclude = preg_replace('/[^0-9,]+/', '', $exclude);
-		// Setup attachments array
-		$attachments = get_children(array('post_parent' => $id, 'exclude' => $exclude, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $order, 'orderby' => $orderby));
+	} elseif ( ! empty( $atts['exclude'] ) ) {
+		$attachments = get_children( array( 'post_parent' => $id, 'exclude' => $atts['exclude'], 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $atts['order'], 'orderby' => $atts['orderby'] ) );
 	} else {
-		// Setup attachments array
-		$attachments = get_children(array('post_parent' => $id, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $order, 'orderby' => $orderby));
+		$attachments = get_children( array( 'post_parent' => $id, 'post_status' => 'inherit', 'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => $atts['order'], 'orderby' => $atts['orderby'] ) );
 	}
 
-	if(empty($attachments)) return '';
+	if ( empty( $attachments ) ) {
+		return '';
+	}
 
-	// Filter gallery differently for feeds
-	if(is_feed()) {
+	if ( is_feed() ) {
 		$output = "\n";
-		foreach($attachments as $att_id => $attachment) $output .= wp_get_attachment_link($att_id, $size, true) . "\n";
+		foreach ( $attachments as $att_id => $attachment ) {
+			$output .= wp_get_attachment_link( $att_id, $atts['size'], true ) . "\n";
+		}
 		return $output;
 	}
 
-	// Filter tags and attributes
-	$itemtag = tag_escape($itemtag);
-	$captiontag = tag_escape($captiontag);
-	$columns = intval($columns);
-	$itemwidth = $columns > 0 ? floor(100 / $columns) : 100;
+	$itemtag = tag_escape( $atts['itemtag'] );
+	$captiontag = tag_escape( $atts['captiontag'] );
+	$icontag = tag_escape( $atts['icontag'] );
+	$valid_tags = wp_kses_allowed_html( 'post' );
+	if ( ! isset( $valid_tags[ $itemtag ] ) ) {
+		$itemtag = 'dl';
+	}
+	if ( ! isset( $valid_tags[ $captiontag ] ) ) {
+		$captiontag = 'dd';
+	}
+	if ( ! isset( $valid_tags[ $icontag ] ) ) {
+		$icontag = 'dt';
+	}
+
+	$columns = intval( $atts['columns'] );
+	$itemwidth = $columns > 0 ? floor(100/$columns) : 100;
 	$float = is_rtl() ? 'right' : 'left';
+
 	$selector = "gallery-{$instance}";
 
-	// Filter gallery CSS
-	$output = apply_filters('gallery_style', "
+	$gallery_style = '';
+
+	/**
+	 * Filters whether to print default gallery styles.
+	 *
+	 * @since 3.1.0
+	 *
+	 * @param bool $print Whether to print default gallery styles.
+	 *                    Defaults to false if the theme supports HTML5 galleries.
+	 *                    Otherwise, defaults to true.
+	 */
+	if ( apply_filters( 'use_default_gallery_style', ! $html5 ) ) {
+		$gallery_style = "
 		<style type='text/css'>
 			#{$selector} {
 				margin: auto;
@@ -113,46 +157,72 @@ function my_post_gallery($output, $attr) {
 			#{$selector} .gallery-caption {
 				margin-left: 0;
 			}
-		</style>
-		<!-- see gallery_shortcode() in wp-includes/media.php -->
-		<div id='$selector' class='gallery galleryid-{$id}'>"
-	);
+			/* see gallery_shortcode() in wp-includes/media.php */
+		</style>\n\t\t";
+	}
+
+	$size_class = sanitize_html_class( $atts['size'] );
+	$gallery_div = "<div id='$selector' class='gallery galleryid-{$id} gallery-columns-{$columns} gallery-size-{$size_class}'>";
+
+	/**
+	 * Filters the default gallery shortcode CSS styles.
+	 *
+	 * @since 2.5.0
+	 *
+	 * @param string $gallery_style Default CSS styles and opening HTML div container
+	 *                              for the gallery shortcode output.
+	 */
+	$output = apply_filters( 'gallery_style', $gallery_style . $gallery_div );
 
 	$i = 0;
-	foreach($attachments as $id => $attachment) {
-		// Attachment link
-		$link = isset($attr['link']) && 'file' == $attr['link'] ? wp_get_attachment_link($id, $size, false, false) : wp_get_attachment_link($id, $size, true, false); 
-		$image_attributes = wp_get_attachment_image_src( $id, 'full' ); // returns an array
-		$url = $image_attributes[0];
+	foreach ( $attachments as $id => $attachment ) {
 
-		// Start itemtag
+		$attr = ( trim( $attachment->post_excerpt ) ) ? array( 'aria-describedby' => "$selector-$id" ) : '';
+		if ( ! empty( $atts['link'] ) && 'file' === $atts['link'] ) {
+			$image_output = wp_get_attachment_link( $id, $atts['size'], false, false, false, $attr );
+		} elseif ( ! empty( $atts['link'] ) && 'none' === $atts['link'] ) {
+			$image_output = wp_get_attachment_image( $id, $atts['size'], false, $attr );
+		} else {
+			$image_output = wp_get_attachment_link( $id, $atts['size'], true, false, false, $attr );
+		}
+		$image_meta  = wp_get_attachment_metadata( $id );
+
+		$orientation = '';
+		if ( isset( $image_meta['height'], $image_meta['width'] ) ) {
+			$orientation = ( $image_meta['height'] > $image_meta['width'] ) ? 'portrait' : 'landscape';
+		}
 		$output .= "<{$itemtag} class='gallery-item'>";
-		// icontag
 		$output .= "
-		<{$icontag} class='gallery-icon'>
-			$link
-		</{$icontag}>";
-		// Download text
+			<{$icontag} class='gallery-icon {$orientation}'>
+				$image_output
+			</{$icontag}>";
+		// START CUSTOMIZATION
+		// Download link
+		$url = wp_get_attachment_image_src( $id, 'full' )[0]; // returns an array
 		$output .= "
 		<dt class='gallery-download'>
-			<a href='{$url}' download='$id'>Download</a>
+			<a href='{$url}' download=''>Download</a>
 		</dt>";
-		if($captiontag && trim($attachment->post_excerpt)) {
-			// captiontag
+		// END CUSTOMIZATION
+		if ( $captiontag && trim($attachment->post_excerpt) ) {
 			$output .= "
-			<{$captiontag} class='gallery-caption'>
+				<{$captiontag} class='wp-caption-text gallery-caption' id='$selector-$id'>
 				" . wptexturize($attachment->post_excerpt) . "
-			</{$captiontag}>";
+				</{$captiontag}>";
 		}
-		// End itemtag
 		$output .= "</{$itemtag}>";
-		// Line breaks by columns set
-		if($columns > 0 && ++$i % $columns == 0) $output .= '<br style="clear: both">';
+		if ( ! $html5 && $columns > 0 && ++$i % $columns == 0 ) {
+			$output .= '<br style="clear: both" />';
+		}
+	}
+
+	if ( ! $html5 && $columns > 0 && $i % $columns !== 0 ) {
+		$output .= "
+			<br style='clear: both' />";
 	}
 
 	$output .= "
-		<br style='clear: both;'>
-	</div>\n";
+		</div>\n";
 
 	return $output;
 }
