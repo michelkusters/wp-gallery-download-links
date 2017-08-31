@@ -198,10 +198,10 @@ function wpgallerydownloadlinks_post_gallery($output, $attr) {
 			</{$icontag}>";
 		// START CUSTOMIZATION
 		// Download link
-		$url = wp_get_attachment_image_src( $id, 'full' )[0]; // returns an array
+		$url = wp_get_attachment_image_src( $id, 'full' ); // returns an array
 		$output .= "
 		<dt class='gallery-download'>
-			<a href='{$url}' download=''>Download</a>
+			<a href='{$url[0]}' download=''>Download</a>
 		</dt>";
 		// END CUSTOMIZATION
 		if ( $captiontag && trim($attachment->post_excerpt) ) {
