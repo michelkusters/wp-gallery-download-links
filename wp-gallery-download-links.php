@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP Gallery Download Links
 Plugin URI: https://wordpress.org/plugins/wp-gallery-download-link/
-Description: This plugin adds a download link below every image in your WordPress galleries.
+Description: This plugin adds a download link below every image in your WordPress galleries. This plugin currently only affects the old-school <a href="https://codex.wordpress.org/Gallery_Shortcode">gallery shortcode</a>. The gallery block, introduced with Gutenberg in WordPress 5.0, is not affected.
 Author: Michel Kusters
 Version: 1.1
 Author URI: https://www.linkedin.com/in/michelkusters
